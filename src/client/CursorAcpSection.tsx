@@ -17,6 +17,8 @@ export interface CursorAcpStatusView {
   readonly found: boolean
   readonly command?: string
   readonly installHint: string
+  readonly login?: 'signed-in' | 'signed-out' | 'unknown'
+  readonly proxy?: 'missing' | 'partial' | 'set'
   readonly model: string
   readonly effort: string
   readonly fast: boolean
@@ -108,6 +110,10 @@ const divider: CSSProperties = {
   background: 'var(--dsw-alias-border, #333)',
 }
 
+const warnText: CSSProperties = {
+  color: 'var(--dsw-alias-danger, #c00)',
+}
+
 export function CursorAcpSection(props: CursorAcpSectionProps) {
   const { t, loadStatus, saveSettings } = props
   const [status, setStatus] = useState<CursorAcpStatusView | 'loading' | 'error'>('loading')
@@ -169,6 +175,18 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
               <code>{status.command}</code>
             </p>
           ) : null}
+          {status.found ? (
+            <>
+              <p style={status.login === 'signed-in' ? undefined : warnText}>
+                {status.login === 'signed-in' ? t('signedIn') : status.login === 'signed-out' ? t('signedOut') : t('loginUnknown')}
+              </p>
+              {status.proxy === 'set' || status.login === 'signed-in' ? null : (
+                <p style={warnText}>{status.proxy === 'partial' ? t('proxyPartial') : t('proxyMissing')}</p>
+              )}
+            </>
+          ) : (
+            <p>{t('login')}</p>
+          )}
           <h3 style={{ fontSize: 15, margin: '20px 0 6px' }}>{t('picker')}</h3>
           <p style={{ margin: '0 0 8px', lineHeight: 1.5 }}>{t('pickerHelp')}</p>
           <div style={card}>
@@ -276,8 +294,9 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
             </button>
           </div>
           {saveError ? <p style={{ marginTop: 8, color: 'var(--dsw-alias-danger, #c00)' }}>{t('saveFailed')}</p> : null}
-          <p>{t(typeof navigator !== 'undefined' && /Win/i.test(navigator.platform) ? 'installWin' : 'installUnix')}</p>
-          <p>{t('login')}</p>
+          {status.found ? null : (
+            <p>{t(typeof navigator !== 'undefined' && /Win/i.test(navigator.platform) ? 'installWin' : 'installUnix')}</p>
+          )}
         </>
       ) : null}
     </section>

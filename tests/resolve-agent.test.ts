@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { findFileWalkingUp, hostSearchRoots } from '../src/import-host.ts'
 import { isSpawnableAgent, resolveAgent, resolveNodeAgentBundle, searchPathForAgent, wellKnownAgentPaths } from '../src/resolve-agent.ts'
 import { catalogFromOptions, composeCursorModelId, parseCursorModels, splitCursorModelId, withModelArgs } from '../src/models.ts'
+import { parseAgentStatus, readProxyEnv } from '../src/readiness.ts'
 import { parseCursorAcpSettings } from '../src/settings-schema.ts'
 import { cursorAcpStatus } from '../src/status.ts'
 
@@ -155,6 +156,8 @@ describe('cursorAcpStatus', () => {
     assert.equal(status.toolName, 'cursor_agent')
     assert.equal(status.command, undefined)
     assert.equal(status.model, 'auto')
+    assert.equal(status.login, 'unknown')
+    assert.equal(status.proxy, 'missing')
     assert.match(status.installHint, /cursor.com\/install/)
   })
 
@@ -163,9 +166,40 @@ describe('cursorAcpStatus', () => {
       command: 'C:\\Users\\test\\AppData\\Local\\cursor-agent\\agent.exe',
       args: ['acp'],
       source: 'localappdata',
-    })
+    }, { login: 'signed-in', proxy: 'set' })
     assert.equal(status.found, true)
     assert.equal(status.source, 'localappdata')
-    assert.equal(/token|password|secret/i.test(JSON.stringify(status)), false)
+    assert.equal(status.login, 'signed-in')
+    assert.equal(status.proxy, 'set')
+    assert.equal(/token|password|secret|email|userInfo/i.test(JSON.stringify(status)), false)
+  })
+})
+
+describe('readiness', () => {
+  it('reads login from official status json without keeping account fields', () => {
+    assert.equal(parseAgentStatus(JSON.stringify({
+      status: 'authenticated',
+      isAuthenticated: true,
+      userInfo: { email: 'hidden@example.com' },
+    }), '', 0), 'signed-in')
+    assert.equal(parseAgentStatus(JSON.stringify({
+      status: 'unauthenticated',
+      isAuthenticated: false,
+    }), '', 1), 'signed-out')
+    assert.equal(parseAgentStatus('✓ Logged in as hidden@example.com\n', '', 0), 'signed-in')
+    assert.equal(parseAgentStatus('', 'Not logged in. Please run agent login.\n', 1), 'signed-out')
+    assert.equal(parseAgentStatus('', 'ETIMEDOUT', null), 'unknown')
+  })
+
+  it('classifies proxy env without returning values', () => {
+    assert.deepEqual(readProxyEnv({}), { kind: 'missing', names: [] })
+    assert.deepEqual(readProxyEnv({ HTTPS_PROXY: 'http://127.0.0.1:7890' }), {
+      kind: 'partial',
+      names: ['HTTPS_PROXY'],
+    })
+    assert.deepEqual(readProxyEnv({
+      HTTPS_PROXY: 'http://127.0.0.1:7890',
+      NODE_USE_ENV_PROXY: '1',
+    }), { kind: 'set', names: ['HTTPS_PROXY'] })
   })
 })

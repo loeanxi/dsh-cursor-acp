@@ -60,7 +60,7 @@ Restart DeepSeek Harness after install.
 
 Open **Settings → Cursor subagent**.
 
-- If it found the CLI, the chat can see the `cursor_agent` tool. **Finding the CLI is not the same as being signed in.** You still need `agent login` (or `CURSOR_API_KEY`). A job fails if you are not signed in, or if the proxy is missing.
+- If it found the CLI, the chat can see the `cursor_agent` tool. **Finding the CLI is not the same as being signed in.** The page also checks `agent status` and whether this process has `HTTPS_PROXY` + `NODE_USE_ENV_PROXY=1`. It will say if you are not signed in, or if the proxy is missing. It does not show your email.
 - You can pick the child model (effort, Fast, model), then click **Apply**. That only affects `cursor_agent`, not the model of the current chat. The choice is stored by this plugin, so it works on stock DeepSeek Harness too — it does not need the Host settings allowlist.
 
 ## How to use it

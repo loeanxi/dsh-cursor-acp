@@ -8,6 +8,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { importHostPlugin } from './import-host.ts'
 import { listCursorModels } from './list-models.ts'
 import { catalogFromOptions, composeCursorModelId, withModelArgs, type CursorModelOption } from './models.ts'
+import { probeAgentLogin, readProxyEnv } from './readiness.ts'
 import { resolveAgent } from './resolve-agent.ts'
 import { createCursorAcpSettingsSchema, CURSOR_ACP_SETTINGS_NS, parseCursorAcpSettings, type CursorAcpSettings } from './settings-schema.ts'
 import { cursorAcpStatus } from './status.ts'
@@ -118,6 +119,8 @@ export function apply(ctx: Context): void {
       composedModel,
       models,
       families: catalog.families,
+      login: resolved === undefined ? 'unknown' : probeAgentLogin(resolved.command, resolved.args),
+      proxy: readProxyEnv(process.env).kind,
     })
     webCtx.effect(() => server.register({
       kind: 'exact',

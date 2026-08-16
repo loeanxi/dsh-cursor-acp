@@ -9,6 +9,7 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 
 const files = [
   ['src/resolve-agent.ts', 'lib/resolve-agent.js'],
+  ['src/readiness.ts', 'lib/readiness.js'],
   ['src/status.ts', 'lib/status.js'],
   ['src/models.ts', 'lib/models.js'],
   ['src/list-models.ts', 'lib/list-models.js'],
