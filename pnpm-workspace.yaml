@@ -1,0 +1,11 @@
+verifyDepsBeforeRun: false
+peerDependencyRules:
+  ignoreMissing:
+    - '@deepseek-ai/cordis'
+    - '@deepseek-ai/dsh-subagent-acp'
+    - '@deepseek-ai/dsh-tool-subagent'
+    - '@deepseek-ai/dsh-client-runtime'
+    - '@deepseek-ai/dsh-client-locale'
+    - '@deepseek-ai/dsh-client-ui-settings'
+    - '@deepseek-ai/dsh-client-ui-slots'
+    - react

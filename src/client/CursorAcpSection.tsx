@@ -19,6 +19,8 @@ export interface CursorAcpStatusView {
   readonly installHint: string
   readonly login?: 'signed-in' | 'signed-out' | 'unknown'
   readonly proxy?: 'missing' | 'partial' | 'set'
+  readonly clashDirectNode?: boolean
+  readonly hostPluginError?: string
   readonly model: string
   readonly effort: string
   readonly fast: boolean
@@ -183,6 +185,8 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
               {status.proxy === 'set' || status.login === 'signed-in' ? null : (
                 <p style={warnText}>{status.proxy === 'partial' ? t('proxyPartial') : t('proxyMissing')}</p>
               )}
+              {status.clashDirectNode === true ? <p style={warnText}>{t('proxyClashDirect')}</p> : null}
+              {status.hostPluginError !== undefined ? <p style={warnText}>{t('hostPluginMissing')}</p> : null}
             </>
           ) : (
             <p>{t('login')}</p>
