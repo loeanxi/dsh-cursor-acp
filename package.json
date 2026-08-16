@@ -1,7 +1,7 @@
 {
   "name": "dsh-cursor-acp",
-  "displayName": "Cursor ACP",
-  "description": "Delegate standalone tasks to the local Cursor CLI over ACP.",
+  "displayName": "Cursor subagent",
+  "description": "Hand a standalone job to the Cursor CLI already signed in on this machine.",
   "version": "0.1.0",
   "license": "MIT",
   "type": "module",
