@@ -1,4 +1,5 @@
 import type { CursorModelChoice, CursorModelFamily, CursorModelOption } from './models.ts'
+import type { LoginState, ProxyKind } from './readiness.ts'
 import type { ResolvedAgent } from './resolve-agent.ts'
 
 /** Public, secret-free status for the settings page and doctor. */
@@ -8,6 +9,8 @@ export interface CursorAcpStatus {
   readonly source?: ResolvedAgent['source']
   readonly toolName: 'cursor_agent'
   readonly installHint: string
+  readonly login: LoginState
+  readonly proxy: ProxyKind
   readonly model: string
   readonly composedModel: string
   readonly effort: CursorModelChoice['effort']
@@ -31,6 +34,8 @@ export function cursorAcpStatus(
     composedModel?: string
     models?: readonly CursorModelOption[]
     families?: readonly CursorModelFamily[]
+    login?: LoginState
+    proxy?: ProxyKind
   } = {},
   platform = process.platform,
 ): CursorAcpStatus {
@@ -43,9 +48,11 @@ export function cursorAcpStatus(
   const models = extras.models ?? [{ id: 'auto', label: 'Auto' }]
   const families = extras.families ?? [{ id: 'auto', label: 'Auto', efforts: [], hasFast: false }]
   const composedModel = extras.composedModel ?? model
+  const login = extras.login ?? 'unknown'
+  const proxy = extras.proxy ?? 'missing'
   if (resolved === undefined) {
     return {
-      found: false, toolName: 'cursor_agent', installHint,
+      found: false, toolName: 'cursor_agent', installHint, login, proxy,
       model, effort, fast, composedModel, models, families,
     }
   }
@@ -55,6 +62,8 @@ export function cursorAcpStatus(
     source: resolved.source,
     toolName: 'cursor_agent',
     installHint,
+    login,
+    proxy,
     model,
     effort,
     fast,
