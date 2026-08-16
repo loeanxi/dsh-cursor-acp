@@ -1,7 +1,7 @@
 export const zh = {
   nav: 'Cursor 子代理',
   title: 'Cursor CLI（ACP）',
-  intro: '把本机已登录的 Cursor 命令行当成子代理。对话仍在万物智汇，任务会派给 Cursor。这不是模型列表里的「Cursor 模型」。',
+  intro: '把本机已登录的 Cursor 命令行当成子代理。对话仍在 DeepSeek Harness，任务会派给 Cursor。这不是模型列表里的「Cursor 模型」。',
   found: '已找到 Cursor CLI，模型可以使用工具 cursor_agent。',
   missing: '未找到 Cursor CLI。请先安装并登录，然后重启桌面。',
   installWin: 'PowerShell 安装：irm \'https://cursor.com/install?win32=true\' | iex',
