@@ -31,20 +31,10 @@ export interface CursorAcpSettingsValue {
   readonly fast?: boolean
 }
 
-export interface CursorAcpSettingsScope {
-  getSnapshot: () => {
-    status: 'loading' | 'ready' | 'unavailable'
-    value?: CursorAcpSettingsValue
-    writable: boolean
-  }
-  subscribe: (listener: () => void) => () => void
-  set: (field: string, value: unknown) => Promise<void>
-}
-
 export interface CursorAcpSectionProps {
   readonly t: (key: CursorAcpKey) => string
   readonly loadStatus: () => Promise<CursorAcpStatusView>
-  readonly settingsScope: CursorAcpSettingsScope
+  readonly saveSettings: (next: Required<CursorAcpSettingsValue>) => Promise<CursorAcpStatusView>
 }
 
 const EFFORT_KEYS = {
@@ -55,20 +45,15 @@ const EFFORT_KEYS = {
   max: 'effortMax',
 } as const
 
-function choiceFrom(scope: CursorAcpSettingsScope, status: CursorAcpStatusView | 'loading' | 'error'): Required<CursorAcpSettingsValue> {
-  const value = scope.getSnapshot().value
+function choiceFrom(status: CursorAcpStatusView | 'loading' | 'error'): Required<CursorAcpSettingsValue> {
   if (status !== 'loading' && status !== 'error') {
     return {
-      model: value?.model ?? status.model,
-      effort: value?.effort ?? status.effort,
-      fast: value?.fast ?? status.fast,
+      model: status.model,
+      effort: status.effort,
+      fast: status.fast,
     }
   }
-  return {
-    model: value?.model ?? 'auto',
-    effort: value?.effort ?? 'high',
-    fast: value?.fast === true,
-  }
+  return { model: 'auto', effort: 'high', fast: false }
 }
 
 function sameChoice(a: Required<CursorAcpSettingsValue>, b: Required<CursorAcpSettingsValue>): boolean {
@@ -124,11 +109,11 @@ const divider: CSSProperties = {
 }
 
 export function CursorAcpSection(props: CursorAcpSectionProps) {
-  const { t, loadStatus, settingsScope } = props
+  const { t, loadStatus, saveSettings } = props
   const [status, setStatus] = useState<CursorAcpStatusView | 'loading' | 'error'>('loading')
   const [custom, setCustom] = useState('')
   const [draft, setDraft] = useState<Required<CursorAcpSettingsValue> | null>(null)
-  const [tick, setTick] = useState(0)
+  const [saveError, setSaveError] = useState(false)
   useEffect(() => {
     let cancelled = false
     void loadStatus().then(
@@ -137,11 +122,8 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
     )
     return () => { cancelled = true }
   }, [loadStatus])
-  useEffect(() => settingsScope.subscribe(() => setTick(n => n + 1)), [settingsScope])
-  void tick
-  const snap = settingsScope.getSnapshot()
-  const writable = snap.writable && snap.status === 'ready'
-  const saved = choiceFrom(settingsScope, status)
+  const writable = status !== 'loading' && status !== 'error'
+  const saved = choiceFrom(status)
   const choice = draft ?? saved
   const dirty = draft !== null && !sameChoice(draft, saved)
   const families = status !== 'loading' && status !== 'error' ? status.families : [{ id: 'auto', label: 'Auto', efforts: [], hasFast: false }]
@@ -159,14 +141,13 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
 
   const applyChoice = (next: Required<CursorAcpSettingsValue>): void => {
     void (async () => {
-      await settingsScope.set('model', next.model)
-      await settingsScope.set('effort', next.effort)
-      await settingsScope.set('fast', next.fast)
-      setDraft(null)
       try {
-        setStatus(await loadStatus())
+        const savedNext = await saveSettings(next)
+        setStatus(savedNext)
+        setDraft(null)
+        setSaveError(false)
       } catch {
-        setStatus('error')
+        setSaveError(true)
       }
     })()
   }
@@ -294,7 +275,7 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
               {t('modelApply')}
             </button>
           </div>
-          {writable ? null : <p style={{ marginTop: 8 }}>{t('modelUnavailable')}</p>}
+          {saveError ? <p style={{ marginTop: 8, color: 'var(--dsw-alias-danger, #c00)' }}>{t('saveFailed')}</p> : null}
           <p>{t(typeof navigator !== 'undefined' && /Win/i.test(navigator.platform) ? 'installWin' : 'installUnix')}</p>
           <p>{t('login')}</p>
         </>

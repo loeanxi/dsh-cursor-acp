@@ -9,7 +9,7 @@ import { importHostPlugin } from './import-host.ts'
 import { listCursorModels } from './list-models.ts'
 import { catalogFromOptions, composeCursorModelId, withModelArgs, type CursorModelOption } from './models.ts'
 import { resolveAgent } from './resolve-agent.ts'
-import { createCursorAcpSettingsSchema, CURSOR_ACP_SETTINGS_NS, type CursorAcpSettings } from './settings-schema.ts'
+import { createCursorAcpSettingsSchema, CURSOR_ACP_SETTINGS_NS, parseCursorAcpSettings, type CursorAcpSettings } from './settings-schema.ts'
 import { cursorAcpStatus } from './status.ts'
 
 export const name = 'dsh-cursor-acp'
@@ -30,6 +30,7 @@ interface SettingsHandle {
   register: (ns: string, schema: unknown, options?: { base?: object; applies?: 'live' | 'restart' }) => {
     get: () => CursorAcpSettings
     watch: (cb: (next: CursorAcpSettings, prev: CursorAcpSettings) => void) => () => void
+    update: (patch: object) => Promise<void>
   }
 }
 
@@ -39,6 +40,35 @@ function json(res: ServerResponse, status: number, value: unknown): void {
     'cache-control': 'no-store',
   })
   res.end(JSON.stringify(value))
+}
+
+function readJsonBody(req: IncomingMessage, limit = 4096): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
+    let size = 0
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length
+      if (size > limit) {
+        req.destroy()
+        reject(new Error('too large'))
+        return
+      }
+      chunks.push(chunk)
+    })
+    req.on('end', () => {
+      const raw = Buffer.concat(chunks).toString('utf8')
+      if (raw.trim() === '') {
+        resolve({})
+        return
+      }
+      try {
+        resolve(JSON.parse(raw) as unknown)
+      } catch {
+        reject(new Error('invalid json'))
+      }
+    })
+    req.on('error', reject)
+  })
 }
 
 function disposeQuietly(fiber: DisposableFiber | undefined): void {
@@ -81,18 +111,36 @@ export function apply(ctx: Context): void {
         handler: (req: IncomingMessage, res: ServerResponse) => void
       }) => () => void }
     }).webServer
+    const statusPayload = () => cursorAcpStatus(resolved, {
+      model: choice.model,
+      effort: choice.effort,
+      fast: choice.fast,
+      composedModel,
+      models,
+      families: catalog.families,
+    })
     webCtx.effect(() => server.register({
       kind: 'exact',
       path: STATUS_PATH,
-      handler: (_req: IncomingMessage, res: ServerResponse) => {
-        json(res, 200, cursorAcpStatus(resolved, {
-          model: choice.model,
-          effort: choice.effort,
-          fast: choice.fast,
-          composedModel,
-          models,
-          families: catalog.families,
-        }))
+      handler: (req: IncomingMessage, res: ServerResponse) => {
+        const method = req.method ?? 'GET'
+        if (method === 'GET') {
+          json(res, 200, statusPayload())
+          return
+        }
+        if (method !== 'POST') {
+          json(res, 405, { error: 'method-not-allowed' })
+          return
+        }
+        void readJsonBody(req).then(async (body) => {
+          const next = parseCursorAcpSettings(body)
+          await scope.update(next)
+          choice = scope.get()
+          composedModel = composeCursorModelId(choice, models)
+          json(res, 200, statusPayload())
+        }).catch(() => {
+          json(res, 400, { error: 'invalid-settings' })
+        })
       },
     }), 'dsh-cursor-acp: status route')
   })

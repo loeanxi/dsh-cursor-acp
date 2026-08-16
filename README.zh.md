@@ -77,7 +77,7 @@ dsh plugin --profile web add github:loeanxi/dsh-cursor-acp
 打开 **设置 → Cursor 子代理**。
 
 - 显示已找到命令行，智能体就可以用工具 `cursor_agent`。
-- 可以选子代理的思考程度、Fast、模型，再点 **应用**。这只影响交给 Cursor 的那次任务，不会改当前对话用的模型。
+- 可以选子代理的思考程度、Fast、模型，再点 **应用**。这只影响交给 Cursor 的那次任务，不会改当前对话用的模型。选模型由本插件自己保存，原版 DeepSeek Harness 也能改，不依赖 Host 设置白名单。
 
 ## 怎么用
 

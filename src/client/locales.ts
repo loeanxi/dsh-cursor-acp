@@ -27,6 +27,7 @@ export const zh = {
   modelApply: '应用',
   pickerPending: '还没应用，下一轮仍用当前已保存的模型。',
   modelUnavailable: '现在不能改这项设置。请重启 DeepSeek Harness 后再试。',
+  saveFailed: '没保存成功。请确认已经重启过 DeepSeek Harness，再点一次应用。',
 } as const
 
 export const en = {
@@ -58,6 +59,7 @@ export const en = {
   modelApply: 'Apply',
   pickerPending: 'Not applied yet. The next run still uses the saved model.',
   modelUnavailable: 'This setting cannot be changed right now. Restart DeepSeek Harness and try again.',
+  saveFailed: 'Could not save. Restart DeepSeek Harness and click Apply again.',
 } as const
 
 export type CursorAcpKey = keyof typeof zh

@@ -61,7 +61,7 @@ Restart DeepSeek Harness after install.
 Open **Settings → Cursor subagent**.
 
 - If it found the CLI, the agent can use the `cursor_agent` tool.
-- You can pick the child model (effort, Fast, model), then click **Apply**. That only affects `cursor_agent`, not the model of the current chat.
+- You can pick the child model (effort, Fast, model), then click **Apply**. That only affects `cursor_agent`, not the model of the current chat. The choice is stored by this plugin, so it works on stock DeepSeek Harness too — it does not need the Host settings allowlist.
 
 ## How to use it
 
