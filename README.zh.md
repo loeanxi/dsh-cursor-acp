@@ -46,7 +46,7 @@ dsh plugin --profile desktop add link:/absolute/path/to/dsh-cursor-acp
 
 ## 怎么用
 
-在万物智汇里让当前智能体把一件独立的活交给 Cursor。它应调用 `cursor_agent`，提示词要自成一体。子进程用当前工作区目录，额度走你的 Cursor 订阅。中间工具过程留在子进程，父对话只看到最终文本。
+在 DeepSeek Harness 里让当前智能体把一件独立的活交给 Cursor。它应调用 `cursor_agent`，提示词要自成一体。子进程用当前工作区目录，额度走你的 Cursor 订阅。中间工具过程留在子进程，父对话只看到最终文本。
 
 ## 诊断
 
