@@ -1,0 +1,5 @@
+# Register the Cursor ACP host plugin. The browser half is declared on
+# package.json dsh.client and loaded by the harness client roster.
+- insert:
+    - id: dsh-cursor-acp
+      name: dsh-cursor-acp
