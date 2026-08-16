@@ -42,15 +42,22 @@ Use the port your proxy app shows (7890 is common). Then run `agent login` and s
 
 ## Install
 
-Desktop:
+From npm (preferred):
 
 ```sh
-dsh plugin --profile desktop add github:loeanxi/dsh-cursor-acp
+dsh plugin --profile desktop add dsh-cursor-acp
 ```
 
 Web:
 
 ```sh
+dsh plugin --profile web add dsh-cursor-acp
+```
+
+Or from GitHub:
+
+```sh
+dsh plugin --profile desktop add github:loeanxi/dsh-cursor-acp
 dsh plugin --profile web add github:loeanxi/dsh-cursor-acp
 ```
 

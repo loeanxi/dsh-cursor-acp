@@ -60,15 +60,22 @@ Clash 里不要把 `node.exe` / `agent` 设成直连。规则模式请放行 `cu
 
 ## 安装
 
-桌面：
+优先用 npm：
 
 ```sh
-dsh plugin --profile desktop add github:loeanxi/dsh-cursor-acp
+dsh plugin --profile desktop add dsh-cursor-acp
 ```
 
 Web：
 
 ```sh
+dsh plugin --profile web add dsh-cursor-acp
+```
+
+也可以从 GitHub 装：
+
+```sh
+dsh plugin --profile desktop add github:loeanxi/dsh-cursor-acp
 dsh plugin --profile web add github:loeanxi/dsh-cursor-acp
 ```
 
