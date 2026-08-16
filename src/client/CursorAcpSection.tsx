@@ -175,6 +175,7 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
     <section style={{ maxWidth: 640, padding: '8px 0' }}>
       <h2 style={{ fontSize: 18, margin: '0 0 8px' }}>{t('title')}</h2>
       <p style={{ margin: '0 0 12px', lineHeight: 1.5 }}>{t('intro')}</p>
+      <p style={{ margin: '0 0 12px', lineHeight: 1.5 }}>{t('proxyHint')}</p>
       {status === 'loading' ? <p>{t('loading')}</p> : null}
       {status === 'error' ? <p style={{ color: 'var(--dsw-alias-danger, #c00)' }}>{t('failed')}</p> : null}
       {status !== 'loading' && status !== 'error' ? (

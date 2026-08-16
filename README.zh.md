@@ -26,6 +26,36 @@ agent login
 
 不想交互登录的话，也可以设置 `CURSOR_API_KEY`。
 
+## 国内网络（代理）
+
+Cursor 的登录和跑任务都要连国外服务器。浏览器开了「魔法」、能打开 cursor.com，**不等于**终端里的 `agent` / `dsh` 也能连上。Clash 等软件的系统代理，Node 默认不认，会继续直连，然后 `agent login` 失败，或 `cursor_agent` 报地区/网络错误。
+
+先看你的代理软件本地端口（常见是 `7890`，以软件里显示的为准），在**即将运行命令的那个窗口**里设（只对这个窗口有效）：
+
+PowerShell：
+
+```powershell
+$env:HTTP_PROXY = "http://127.0.0.1:7890"
+$env:HTTPS_PROXY = "http://127.0.0.1:7890"
+$env:ALL_PROXY = "http://127.0.0.1:7890"
+$env:NO_PROXY = "localhost,127.0.0.1"
+$env:NODE_USE_ENV_PROXY = "1"
+```
+
+bash：
+
+```bash
+export HTTP_PROXY=http://127.0.0.1:7890
+export HTTPS_PROXY=http://127.0.0.1:7890
+export ALL_PROXY=http://127.0.0.1:7890
+export NO_PROXY=localhost,127.0.0.1
+export NODE_USE_ENV_PROXY=1
+```
+
+然后在**同一个窗口**里再执行 `agent login`，以及启动 DeepSeek Harness。换一个没设过的窗口，又会直连。
+
+Clash 里不要把 `node.exe` / `agent` 设成直连。规则模式请放行 `cursor.com` 等 Cursor 域名；全局模式一般也能过，但可能把国内模型也推进代理。装 CLI 的 `irm` / `curl` 同样要能访问 cursor.com。
+
 ## 安装
 
 桌面：

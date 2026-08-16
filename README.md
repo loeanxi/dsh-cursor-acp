@@ -26,6 +26,20 @@ agent login
 
 You can also set `CURSOR_API_KEY` instead of `agent login`.
 
+## Mainland China / proxy
+
+`agent login` and `cursor_agent` must reach Cursor's servers. A browser proxy does **not** apply to the terminal. Clash-style system proxy is ignored by Node unless you set it in **the same window** you will use:
+
+```powershell
+$env:HTTP_PROXY = "http://127.0.0.1:7890"
+$env:HTTPS_PROXY = "http://127.0.0.1:7890"
+$env:ALL_PROXY = "http://127.0.0.1:7890"
+$env:NO_PROXY = "localhost,127.0.0.1"
+$env:NODE_USE_ENV_PROXY = "1"
+```
+
+Use the port your proxy app shows (7890 is common). Then run `agent login` and start DeepSeek Harness in that same window. Let `node.exe` / `agent` use the proxy; do not force them to DIRECT.
+
 ## Install
 
 Desktop:
