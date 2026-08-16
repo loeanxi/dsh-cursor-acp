@@ -76,7 +76,7 @@ dsh plugin --profile web add github:loeanxi/dsh-cursor-acp
 
 打开 **设置 → Cursor 子代理**。
 
-- 显示已找到命令行，智能体就可以用工具 `cursor_agent`。
+- 显示已找到命令行，对话里会出现工具 `cursor_agent`。**找到命令行不等于已经登录。** 还要在终端执行 `agent login`（或设置 `CURSOR_API_KEY`）。没登录或代理不通时，派活会失败。
 - 可以选子代理的思考程度、Fast、模型，再点 **应用**。这只影响交给 Cursor 的那次任务，不会改当前对话用的模型。选模型由本插件自己保存，原版 DeepSeek Harness 也能改，不依赖 Host 设置白名单。
 
 ## 怎么用
@@ -91,7 +91,7 @@ dsh plugin --profile web add github:loeanxi/dsh-cursor-acp
 dsh plugin --profile desktop exec dsh-cursor-acp doctor
 ```
 
-Web 端把 `--profile desktop` 换成 `--profile web`。这条命令只看它在哪找 CLI，不读 Cursor 凭据。
+Web 端把 `--profile desktop` 换成 `--profile web`。这条命令只看它在哪找 CLI，不检查有没有登录，也不读 Cursor 凭据。
 
 ## 许可证
 
