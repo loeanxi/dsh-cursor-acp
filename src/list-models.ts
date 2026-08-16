@@ -4,6 +4,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { parseCursorModels, type CursorModelOption } from './models.ts'
+import { spawnAgentEnv } from './proxy-env.ts'
 
 const LIST_TIMEOUT_MS = 8_000
 
@@ -26,6 +27,7 @@ export function listCursorModels(command: string, args: readonly string[]): Curs
     encoding: 'utf8',
     timeout: LIST_TIMEOUT_MS,
     windowsHide: true,
+    env: spawnAgentEnv(),
   })
   if (result.status !== 0) return parseCursorModels('')
   return parseCursorModels(result.stdout ?? '')

@@ -70,12 +70,11 @@
   "devDependencies": {
     "@types/node": "^22.20.0",
     "@types/react": "~18.3.1",
-    "tsdown": "^0.22.2",
     "typescript": "^5.9.3"
   },
   "scripts": {
     "build": "node scripts/emit.mjs",
-    "test": "node --import tsx --test tests/resolve-agent.test.ts",
+    "test": "node --test tests/resolve-agent.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

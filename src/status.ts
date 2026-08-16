@@ -11,6 +11,8 @@ export interface CursorAcpStatus {
   readonly installHint: string
   readonly login: LoginState
   readonly proxy: ProxyKind
+  readonly clashDirectNode: boolean
+  readonly hostPluginError?: string
   readonly model: string
   readonly composedModel: string
   readonly effort: CursorModelChoice['effort']
@@ -36,6 +38,8 @@ export function cursorAcpStatus(
     families?: readonly CursorModelFamily[]
     login?: LoginState
     proxy?: ProxyKind
+    clashDirectNode?: boolean
+    hostPluginError?: string
   } = {},
   platform = process.platform,
 ): CursorAcpStatus {
@@ -50,9 +54,12 @@ export function cursorAcpStatus(
   const composedModel = extras.composedModel ?? model
   const login = extras.login ?? 'unknown'
   const proxy = extras.proxy ?? 'missing'
+  const clashDirectNode = extras.clashDirectNode === true
+  const hostPluginError = extras.hostPluginError
   if (resolved === undefined) {
     return {
-      found: false, toolName: 'cursor_agent', installHint, login, proxy,
+      found: false, toolName: 'cursor_agent', installHint, login, proxy, clashDirectNode,
+      ...hostPluginError === undefined ? {} : { hostPluginError },
       model, effort, fast, composedModel, models, families,
     }
   }
@@ -64,6 +71,8 @@ export function cursorAcpStatus(
     installHint,
     login,
     proxy,
+    clashDirectNode,
+    ...hostPluginError === undefined ? {} : { hostPluginError },
     model,
     effort,
     fast,

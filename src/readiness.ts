@@ -5,6 +5,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { argsForModelsCommand } from './list-models.ts'
+import { spawnAgentEnv } from './proxy-env.ts'
 
 const STATUS_TIMEOUT_MS = 8_000
 
@@ -63,6 +64,7 @@ export function probeAgentLogin(command: string, args: readonly string[]): Login
     encoding: 'utf8',
     timeout: STATUS_TIMEOUT_MS,
     windowsHide: true,
+    env: spawnAgentEnv(),
   })
   return parseAgentStatus(result.stdout ?? '', result.stderr ?? '', result.status)
 }

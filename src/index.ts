@@ -5,9 +5,11 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { cursorAcpProviderConfig } from './acp-config.ts'
 import { importHostPlugin } from './import-host.ts'
 import { listCursorModels } from './list-models.ts'
-import { catalogFromOptions, composeCursorModelId, withModelArgs, type CursorModelOption } from './models.ts'
+import { catalogFromOptions, composeCursorModelId, type CursorModelOption } from './models.ts'
+import { detectClashNodeDirect } from './clash-direct.ts'
 import { probeAgentLogin, readProxyEnv } from './readiness.ts'
 import { resolveAgent } from './resolve-agent.ts'
 import { createCursorAcpSettingsSchema, CURSOR_ACP_SETTINGS_NS, parseCursorAcpSettings, type CursorAcpSettings } from './settings-schema.ts'
@@ -95,6 +97,7 @@ export function apply(ctx: Context): void {
   if (resolved !== undefined) models = listCursorModels(resolved.command, resolved.args)
   let catalog = catalogFromOptions(models)
   let composedModel = composeCursorModelId(choice, models)
+  let hostPluginError: string | undefined
 
   const settings = (ctx as Context & { settings: SettingsHandle }).settings
   const scope = settings.register(CURSOR_ACP_SETTINGS_NS, createCursorAcpSettingsSchema(), {
@@ -121,6 +124,8 @@ export function apply(ctx: Context): void {
       families: catalog.families,
       login: resolved === undefined ? 'unknown' : probeAgentLogin(resolved.command, resolved.args),
       proxy: readProxyEnv(process.env).kind,
+      clashDirectNode: detectClashNodeDirect(),
+      ...hostPluginError === undefined ? {} : { hostPluginError },
     })
     webCtx.effect(() => server.register({
       kind: 'exact',
@@ -166,12 +171,12 @@ export function apply(ctx: Context): void {
         choice = next
         composedModel = composeCursorModelId(next, models)
         catalog = catalogFromOptions(models)
-        acpFiber = ctx.plugin(acp, {
-          providerName: 'cursor',
-          command: resolved.command,
-          args: withModelArgs(resolved.args, composedModel),
-          permission: 'allow',
-        }) as DisposableFiber
+        acpFiber = ctx.plugin(acp, cursorAcpProviderConfig(
+          resolved.command,
+          resolved.args,
+          composedModel,
+          process.env,
+        )) as DisposableFiber
         toolFiber = ctx.plugin(tool, {
           provider: 'cursor',
           toolName: 'cursor_agent',
@@ -187,7 +192,8 @@ export function apply(ctx: Context): void {
         mount(next)
       }), 'dsh-cursor-acp: model watch')
     } catch (error: unknown) {
-      ctx.logger.error(error)
+      hostPluginError = error instanceof Error ? error.message : String(error)
+      ctx.logger.error(hostPluginError)
     }
   })()
 }

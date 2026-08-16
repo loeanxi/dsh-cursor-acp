@@ -56,6 +56,8 @@ export NODE_USE_ENV_PROXY=1
 
 Clash 里不要把 `node.exe` / `agent` 设成直连。规则模式请放行 `cursor.com` 等 Cursor 域名；全局模式一般也能过，但可能把国内模型也推进代理。装 CLI 的 `irm` / `curl` 同样要能访问 cursor.com。
 
+插件会把当前进程的 `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` / `NO_PROXY` / `NODE_USE_ENV_PROXY` 传给 Cursor 子进程。若 Clash 配置里写了 `PROCESS-NAME,node.exe,DIRECT`，设置页和 `doctor` 会提示：子进程可能没走代理。
+
 ## 安装
 
 桌面：
@@ -91,7 +93,7 @@ dsh plugin --profile web add github:loeanxi/dsh-cursor-acp
 dsh plugin --profile desktop exec dsh-cursor-acp doctor
 ```
 
-Web 端把 `--profile desktop` 换成 `--profile web`。这条命令只看它在哪找 CLI，不检查有没有登录，也不读 Cursor 凭据。
+Web 端把 `--profile desktop` 换成 `--profile web`。这条命令会看 CLI 路径、登录/代理，以及这份 dsh 能不能加载 `@deepseek-ai/dsh-subagent-acp` / `dsh-tool-subagent`。不读 Cursor 凭据。若官方包不在，设置页会写明，并且不会挂上 `cursor_agent`。
 
 ## 许可证
 

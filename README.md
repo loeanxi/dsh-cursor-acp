@@ -38,7 +38,7 @@ $env:NO_PROXY = "localhost,127.0.0.1"
 $env:NODE_USE_ENV_PROXY = "1"
 ```
 
-Use the port your proxy app shows (7890 is common). Then run `agent login` and start DeepSeek Harness in that same window. Let `node.exe` / `agent` use the proxy; do not force them to DIRECT.
+Use the port your proxy app shows (7890 is common). Then run `agent login` and start DeepSeek Harness in that same window. This plugin forwards `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` / `NO_PROXY` / `NODE_USE_ENV_PROXY` to the Cursor child. Let `node.exe` / `agent` use the proxy; do not force them to DIRECT. If a Clash config sends `node.exe` DIRECT, Settings and `doctor` will say the child may skip the proxy.
 
 ## Install
 
@@ -75,7 +75,7 @@ The job runs in the current workspace folder and uses your Cursor subscription. 
 dsh plugin --profile desktop exec dsh-cursor-acp doctor
 ```
 
-On web, use `--profile web`. This only prints the path it looked for. It does not check whether you are signed in, and it does not read Cursor credentials.
+On web, use `--profile web`. This prints the CLI path, login/proxy hints, and whether this dsh can load `@deepseek-ai/dsh-subagent-acp` / `dsh-tool-subagent`. It does not read Cursor credentials. If those official packages are missing, Settings says so and `cursor_agent` is not registered.
 
 ## License
 

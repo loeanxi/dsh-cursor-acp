@@ -3,9 +3,12 @@ import { describe, it } from 'node:test'
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { findFileWalkingUp, hostSearchRoots } from '../src/import-host.ts'
+import { findFileWalkingUp, hostSearchRoots, missingHostPluginMessage, packageJsonSearchFiles, resolveHostSpecifier } from '../src/import-host.ts'
 import { isSpawnableAgent, resolveAgent, resolveNodeAgentBundle, searchPathForAgent, wellKnownAgentPaths } from '../src/resolve-agent.ts'
+import { cursorAcpProviderConfig } from '../src/acp-config.ts'
 import { catalogFromOptions, composeCursorModelId, parseCursorModels, splitCursorModelId, withModelArgs } from '../src/models.ts'
+import { clashConfigCandidates, clashDirectsNode } from '../src/clash-direct.ts'
+import { proxyChildEnv, spawnAgentEnv } from '../src/proxy-env.ts'
 import { parseAgentStatus, readProxyEnv } from '../src/readiness.ts'
 import { parseCursorAcpSettings } from '../src/settings-schema.ts'
 import { cursorAcpStatus } from '../src/status.ts'
@@ -82,6 +85,27 @@ describe('import-host', () => {
       join(target, 'index.js'),
     )
   })
+
+  it('resolves a host package with createRequire from that tree', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dsh-cursor-acp-pkg-'))
+    const pkgDir = join(root, 'node_modules', '@deepseek-ai', 'dsh-subagent-acp')
+    mkdirSync(join(pkgDir, 'lib'), { recursive: true })
+    writeFileSync(join(root, 'package.json'), '{"name":"host","type":"module"}\n')
+    writeFileSync(join(pkgDir, 'package.json'), '{"name":"@deepseek-ai/dsh-subagent-acp","type":"module","exports":{".":"./lib/index.js"}}\n')
+    writeFileSync(join(pkgDir, 'lib', 'index.js'), 'export const name = "ok"\n')
+    const resolved = resolveHostSpecifier('@deepseek-ai/dsh-subagent-acp', join(root, 'package.json'))
+    assert.equal(resolved, join(pkgDir, 'lib', 'index.js'))
+    mkdirSync(join(root, 'apps', 'cli', 'lib'), { recursive: true })
+    writeFileSync(join(root, 'apps', 'cli', 'lib', 'bin.js'), 'export {}\n')
+    assert.ok(packageJsonSearchFiles([join(root, 'apps', 'cli', 'lib', 'bin.js')]).includes(join(root, 'package.json')))
+  })
+
+  it('names the missing official packages when resolve fails', () => {
+    const message = missingHostPluginMessage('@deepseek-ai/dsh-subagent-acp')
+    assert.match(message, /cursor_agent is not registered/)
+    assert.match(message, /dsh-subagent-acp/)
+    assert.match(message, /createRequire/)
+  })
 })
 
 describe('models', () => {
@@ -130,6 +154,14 @@ describe('models', () => {
       composeCursorModelId({ model: 'composer-2.5', effort: 'high', fast: true }, options),
       'composer-2.5-fast',
     )
+    assert.equal(
+      composeCursorModelId({ model: 'not-listed', effort: 'high', fast: false }, options),
+      'not-listed',
+    )
+    assert.equal(
+      composeCursorModelId({ model: 'cursor-grok-4.6', effort: 'low', fast: true }, options),
+      'cursor-grok-4.6[effort=low,fast=true]',
+    )
   })
 })
 
@@ -146,6 +178,8 @@ describe('settings-schema', () => {
       effort: 'high',
       fast: true,
     })
+    assert.deepEqual(parseCursorAcpSettings(null), { model: 'auto', effort: 'high', fast: false })
+    assert.deepEqual(parseCursorAcpSettings([]), { model: 'auto', effort: 'high', fast: false })
   })
 })
 
@@ -171,6 +205,7 @@ describe('cursorAcpStatus', () => {
     assert.equal(status.source, 'localappdata')
     assert.equal(status.login, 'signed-in')
     assert.equal(status.proxy, 'set')
+    assert.equal(status.clashDirectNode, false)
     assert.equal(/token|password|secret|email|userInfo/i.test(JSON.stringify(status)), false)
   })
 })
@@ -201,5 +236,66 @@ describe('readiness', () => {
       HTTPS_PROXY: 'http://127.0.0.1:7890',
       NODE_USE_ENV_PROXY: '1',
     }), { kind: 'set', names: ['HTTPS_PROXY'] })
+  })
+})
+
+describe('proxyChildEnv', () => {
+  it('forwards the five proxy names and fills NODE_USE_ENV_PROXY when a URL is set', () => {
+    assert.deepEqual(proxyChildEnv({}), {})
+    assert.deepEqual(proxyChildEnv({
+      HTTPS_PROXY: 'http://127.0.0.1:7890',
+      NO_PROXY: 'localhost',
+    }), {
+      HTTPS_PROXY: 'http://127.0.0.1:7890',
+      NO_PROXY: 'localhost',
+      NODE_USE_ENV_PROXY: '1',
+    })
+    assert.deepEqual(proxyChildEnv({
+      HTTPS_PROXY: 'http://127.0.0.1:7890',
+      NODE_USE_ENV_PROXY: '1',
+    }), {
+      HTTPS_PROXY: 'http://127.0.0.1:7890',
+      NODE_USE_ENV_PROXY: '1',
+    })
+  })
+
+  it('passes proxy env into ACP child config and spawn env', () => {
+    const parent = {
+      PATH: '/bin',
+      HTTPS_PROXY: 'http://127.0.0.1:7890',
+      NO_PROXY: 'localhost',
+    }
+    const spawned = spawnAgentEnv(parent)
+    assert.equal(spawned.PATH, '/bin')
+    assert.equal(spawned.HTTPS_PROXY, 'http://127.0.0.1:7890')
+    assert.equal(spawned.NODE_USE_ENV_PROXY, '1')
+    const cfg = cursorAcpProviderConfig(
+      'C:\\cli\\node.exe',
+      ['C:\\cli\\index.js', 'acp'],
+      'composer-2.5',
+      parent,
+    )
+    assert.equal(cfg.providerName, 'cursor')
+    assert.deepEqual(cfg.args, ['C:\\cli\\index.js', '--model', 'composer-2.5', 'acp'])
+    assert.deepEqual(cfg.env, {
+      HTTPS_PROXY: 'http://127.0.0.1:7890',
+      NO_PROXY: 'localhost',
+      NODE_USE_ENV_PROXY: '1',
+    })
+  })
+})
+
+describe('clashDirectsNode', () => {
+  it('matches PROCESS-NAME node.exe DIRECT and ignores comments', () => {
+    assert.equal(clashDirectsNode('rules:\n  - PROCESS-NAME,node.exe,DIRECT\n'), true)
+    assert.equal(clashDirectsNode('  - PROCESS-NAME,node,DIRECT\n'), true)
+    assert.equal(clashDirectsNode('# - PROCESS-NAME,node.exe,DIRECT\n  - DOMAIN,cursor.com,PROXY\n'), false)
+    assert.equal(clashDirectsNode('  - PROCESS-NAME,chrome.exe,DIRECT\n'), false)
+  })
+
+  it('lists well-known clash paths without walking the whole home', () => {
+    const paths = clashConfigCandidates({ APPDATA: 'C:\\App', LOCALAPPDATA: 'C:\\Local' }, 'C:\\Home')
+    assert.ok(paths.some(path => path.includes('clash') && path.endsWith('config.yaml')))
+    assert.ok(paths.every(path => path.startsWith('C:\\')))
   })
 })
