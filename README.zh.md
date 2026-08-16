@@ -79,13 +79,18 @@ dsh plugin --profile web add github:loeanxi/dsh-cursor-acp
 打开 **设置 → Cursor 子代理**。
 
 - 显示已找到命令行，对话里会出现工具 `cursor_agent`。**找到命令行不等于已经登录。** 设置页会跑一次官方的 `agent status`，并看当前进程有没有 `HTTPS_PROXY` 和 `NODE_USE_ENV_PROXY=1`。没登录或代理没带上时，会写出原因，不会显示你的邮箱。
-- 可以选子代理的思考程度、Fast、模型，再点 **应用**。这只影响交给 Cursor 的那次任务，不会改当前对话用的模型。选模型由本插件自己保存，原版 DeepSeek Harness 也能改，不依赖 Host 设置白名单。
+- 可以选子代理的思考程度、Fast、模型，再点 **应用**。这只影响交给 Cursor 的那次任务，不会改当前对话用的模型。选模型由本插件自己保存，原版 DeepSeek Harness 也能改，不依赖 Host 设置白名单。如果官方设置里这一项是灰的，别管它，用 **设置 → Cursor 子代理**。
+- **测一下** 会派一个官方只读任务（`agent --print --mode ask`，回复 `pong`）。会用一点 Cursor 额度。这不是完整的 ACP 会话。
+
+![设置 → Cursor 子代理](assets/settings.png)
 
 ## 怎么用
 
 直接在对话里说即可，比如「让 Cursor 实现这个功能」「让 Cursor 看一下这个文件」。把事情说完整。智能体会自己去调 `cursor_agent`。
 
 任务在当前工作区目录里跑，额度走你的 Cursor 订阅。这边对话只看到最终结果。
+
+![对话里 cursor_agent 跑完一个小任务](assets/job.png)
 
 ## 找不到命令行时
 

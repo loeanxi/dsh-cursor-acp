@@ -35,10 +35,13 @@ export interface CursorAcpSettingsValue {
   readonly fast?: boolean
 }
 
+export type CursorAcpProbeKind = 'ok' | 'missing-cli' | 'signed-out' | 'timeout' | 'failed'
+
 export interface CursorAcpSectionProps {
   readonly t: (key: CursorAcpKey) => string
   readonly loadStatus: () => Promise<CursorAcpStatusView>
   readonly saveSettings: (next: Required<CursorAcpSettingsValue>) => Promise<CursorAcpStatusView>
+  readonly runProbe: () => Promise<{ kind: CursorAcpProbeKind }>
 }
 
 const EFFORT_KEYS = {
@@ -117,11 +120,12 @@ const warnText: CSSProperties = {
 }
 
 export function CursorAcpSection(props: CursorAcpSectionProps) {
-  const { t, loadStatus, saveSettings } = props
+  const { t, loadStatus, saveSettings, runProbe } = props
   const [status, setStatus] = useState<CursorAcpStatusView | 'loading' | 'error'>('loading')
   const [custom, setCustom] = useState('')
   const [draft, setDraft] = useState<Required<CursorAcpSettingsValue> | null>(null)
   const [saveError, setSaveError] = useState(false)
+  const [probe, setProbe] = useState<CursorAcpProbeKind | 'idle' | 'running'>('idle')
   useEffect(() => {
     let cancelled = false
     void loadStatus().then(
@@ -187,6 +191,25 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
               )}
               {status.clashDirectNode === true ? <p style={warnText}>{t('proxyClashDirect')}</p> : null}
               {status.hostPluginError !== undefined ? <p style={warnText}>{t('hostPluginMissing')}</p> : null}
+              <p style={{ margin: '12px 0 6px', lineHeight: 1.5 }}>{t('probeHelp')}</p>
+              <button
+                type="button"
+                disabled={!writable || probe === 'running'}
+                onClick={() => {
+                  setProbe('running')
+                  void runProbe().then(
+                    (next) => setProbe(next.kind),
+                    () => setProbe('failed'),
+                  )
+                }}
+              >
+                {probe === 'running' ? t('probeRunning') : t('probe')}
+              </button>
+              {probe === 'ok' ? <p>{t('probeOk')}</p> : null}
+              {probe === 'failed' ? <p style={warnText}>{t('probeFail')}</p> : null}
+              {probe === 'missing-cli' ? <p style={warnText}>{t('probeMissing')}</p> : null}
+              {probe === 'signed-out' ? <p style={warnText}>{t('probeSignedOut')}</p> : null}
+              {probe === 'timeout' ? <p style={warnText}>{t('probeTimeout')}</p> : null}
             </>
           ) : (
             <p>{t('login')}</p>

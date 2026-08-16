@@ -7,6 +7,8 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { cursorAcpProviderConfig } from './acp-config.ts'
 import { importHostPlugin } from './import-host.ts'
+import { runCursorProbe, type ProbeResult } from './probe.ts'
+import { CURSOR_AGENT_WHEN_TO_USE } from './prompt.ts'
 import { listCursorModels } from './list-models.ts'
 import { catalogFromOptions, composeCursorModelId, type CursorModelOption } from './models.ts'
 import { detectClashNodeDirect } from './clash-direct.ts'
@@ -22,6 +24,7 @@ export { resolveAgent } from './resolve-agent.ts'
 export { cursorAcpStatus } from './status.ts'
 
 const STATUS_PATH = '/plugins/dsh-cursor-acp/status'
+const PROBE_PATH = '/plugins/dsh-cursor-acp/probe'
 const ACP_LIB = 'packages/subagent/subagent-acp/lib/index.js'
 const TOOL_LIB = 'packages/subagent/tool-subagent/lib/index.js'
 
@@ -129,6 +132,25 @@ export function apply(ctx: Context): void {
     })
     webCtx.effect(() => server.register({
       kind: 'exact',
+      path: PROBE_PATH,
+      handler: (req: IncomingMessage, res: ServerResponse) => {
+        if ((req.method ?? 'GET') !== 'POST') {
+          json(res, 405, { error: 'method-not-allowed' })
+          return
+        }
+        if (resolved === undefined) {
+          json(res, 200, { kind: 'missing-cli' } satisfies ProbeResult)
+          return
+        }
+        void runCursorProbe(resolved.command, resolved.args, composedModel).then((result) => {
+          json(res, 200, result)
+        }).catch(() => {
+          json(res, 200, { kind: 'failed' } satisfies ProbeResult)
+        })
+      },
+    }), 'dsh-cursor-acp: probe route')
+    webCtx.effect(() => server.register({
+      kind: 'exact',
       path: STATUS_PATH,
       handler: (req: IncomingMessage, res: ServerResponse) => {
         const method = req.method ?? 'GET'
@@ -186,6 +208,11 @@ export function apply(ctx: Context): void {
         ctx.logger.info(`dsh-cursor-acp: cursor_agent model=${composedModel} via ${resolved.source}`)
       }
 
+      ctx.effect(() => ctx.systemPrompt.section({
+        name: 'tool:cursor_agent',
+        order: 120,
+        text: CURSOR_AGENT_WHEN_TO_USE,
+      }), 'dsh-cursor-acp: when to use')
       mount(scope.get())
       ctx.effect(() => scope.watch((next, prev) => {
         if (sameChoice(next, prev)) return

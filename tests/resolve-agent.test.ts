@@ -12,6 +12,9 @@ import { proxyChildEnv, spawnAgentEnv } from '../src/proxy-env.ts'
 import { parseAgentStatus, readProxyEnv } from '../src/readiness.ts'
 import { parseCursorAcpSettings } from '../src/settings-schema.ts'
 import { cursorAcpStatus } from '../src/status.ts'
+import { argsForProbeCommand, parseProbeOutput, PROBE_PROMPT } from '../src/probe.ts'
+import { CURSOR_AGENT_WHEN_TO_USE } from '../src/prompt.ts'
+import { en, zh } from '../src/client/locales.ts'
 
 describe('searchPathForAgent', () => {
   it('returns undefined for an empty PATH', () => {
@@ -297,5 +300,46 @@ describe('clashDirectsNode', () => {
     const paths = clashConfigCandidates({ APPDATA: 'C:\\App', LOCALAPPDATA: 'C:\\Local' }, 'C:\\Home')
     assert.ok(paths.some(path => path.includes('clash') && path.endsWith('config.yaml')))
     assert.ok(paths.every(path => path.startsWith('C:\\')))
+  })
+})
+
+describe('prompt', () => {
+  it('tells the parent when to call cursor_agent and to write a complete prompt', () => {
+    assert.match(CURSOR_AGENT_WHEN_TO_USE, /cursor_agent/)
+    assert.match(CURSOR_AGENT_WHEN_TO_USE, /complete, self-contained prompt/)
+    assert.equal(/万物智汇|X-Mart/iu.test(CURSOR_AGENT_WHEN_TO_USE), false)
+  })
+})
+
+describe('probe', () => {
+  it('builds a read-only print argv and keeps the prompt last', () => {
+    const argv = argsForProbeCommand(['C:\\cli\\index.js', 'acp'], 'composer-2.5', 'C:\\tmp\\probe')
+    assert.deepEqual(argv, [
+      'C:\\cli\\index.js',
+      '--print',
+      '--mode',
+      'ask',
+      '--trust',
+      '--workspace',
+      'C:\\tmp\\probe',
+      '--model',
+      'composer-2.5',
+      PROBE_PROMPT,
+    ])
+    assert.equal(argsForProbeCommand(['C:\\cli\\index.js', 'acp'], 'auto', 'C:\\tmp\\probe').includes('--model'), false)
+  })
+
+  it('classifies print output without keeping CLI text', () => {
+    assert.deepEqual(parseProbeOutput('pong\n', '', 0), { kind: 'ok' })
+    assert.deepEqual(parseProbeOutput('Pong.', '', 0), { kind: 'ok' })
+    assert.deepEqual(parseProbeOutput('', 'Not logged in. Please run agent login.\n', 1), { kind: 'signed-out' })
+    assert.deepEqual(parseProbeOutput('nope', '', 1), { kind: 'failed' })
+    assert.deepEqual(parseProbeOutput('', '', null), { kind: 'timeout' })
+  })
+})
+
+describe('locales', () => {
+  it('keeps zh and en keys in lockstep', () => {
+    assert.deepEqual(Object.keys(zh), Object.keys(en))
   })
 })
