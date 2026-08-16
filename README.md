@@ -60,7 +60,7 @@ Restart DeepSeek Harness after install.
 
 Open **Settings → Cursor subagent**.
 
-- If it found the CLI, the agent can use the `cursor_agent` tool.
+- If it found the CLI, the chat can see the `cursor_agent` tool. **Finding the CLI is not the same as being signed in.** You still need `agent login` (or `CURSOR_API_KEY`). A job fails if you are not signed in, or if the proxy is missing.
 - You can pick the child model (effort, Fast, model), then click **Apply**. That only affects `cursor_agent`, not the model of the current chat. The choice is stored by this plugin, so it works on stock DeepSeek Harness too — it does not need the Host settings allowlist.
 
 ## How to use it
@@ -75,7 +75,7 @@ The job runs in the current workspace folder and uses your Cursor subscription. 
 dsh plugin --profile desktop exec dsh-cursor-acp doctor
 ```
 
-On web, use `--profile web`. This only prints the path it looked for. It does not read Cursor credentials.
+On web, use `--profile web`. This only prints the path it looked for. It does not check whether you are signed in, and it does not read Cursor credentials.
 
 ## License
 
