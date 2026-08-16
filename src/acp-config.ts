@@ -11,6 +11,7 @@ export interface CursorAcpProviderConfig {
   readonly providerName: 'cursor'
   readonly command: string
   readonly args: readonly string[]
+  /** Official ACP only has allow | reject. Reject would fail unattended jobs. */
   readonly permission: 'allow'
   readonly env: Record<string, string>
 }

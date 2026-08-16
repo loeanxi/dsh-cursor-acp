@@ -61,13 +61,18 @@ Restart DeepSeek Harness after install.
 Open **Settings → Cursor subagent**.
 
 - If it found the CLI, the chat can see the `cursor_agent` tool. **Finding the CLI is not the same as being signed in.** The page also checks `agent status` and whether this process has `HTTPS_PROXY` + `NODE_USE_ENV_PROXY=1`. It will say if you are not signed in, or if the proxy is missing. It does not show your email.
-- You can pick the child model (effort, Fast, model), then click **Apply**. That only affects `cursor_agent`, not the model of the current chat. The choice is stored by this plugin, so it works on stock DeepSeek Harness too — it does not need the Host settings allowlist.
+- You can pick the child model (effort, Fast, model), then click **Apply**. That only affects `cursor_agent`, not the model of the current chat. The choice is stored by this plugin, so it works on stock DeepSeek Harness too — it does not need the Host settings allowlist. If an official settings row for this plugin is grey, ignore it and use **Settings → Cursor subagent**.
+- **Test** sends one official read-only `agent --print --mode ask` job (reply `pong`). It uses a little Cursor quota. It does not start a full ACP session.
+
+![Settings → Cursor subagent](assets/settings.png)
 
 ## How to use it
 
 Ask in chat, for example: “Have Cursor implement this feature” or “Have Cursor review this file.” Give enough detail in that message. The agent should call `cursor_agent` on its own.
 
 The job runs in the current workspace folder and uses your Cursor subscription. The parent chat only sees the final result.
+
+![A chat where cursor_agent finishes a small job](assets/job.png)
 
 ## If it cannot find the CLI
 

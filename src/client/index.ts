@@ -15,6 +15,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 const NS = 'settings.cursor-acp'
 const STATUS_PATH = '/plugins/dsh-cursor-acp/status'
+const PROBE_PATH = '/plugins/dsh-cursor-acp/probe'
 
 async function loadStatus(): Promise<CursorAcpStatusView> {
   const response = await fetch(STATUS_PATH, { headers: { accept: 'application/json' } })
@@ -32,6 +33,15 @@ async function saveSettings(next: Required<CursorAcpSettingsValue>): Promise<Cur
   return await response.json() as CursorAcpStatusView
 }
 
+async function runProbe(): Promise<{ kind: 'ok' | 'missing-cli' | 'signed-out' | 'timeout' | 'failed' }> {
+  const response = await fetch(PROBE_PATH, {
+    method: 'POST',
+    headers: { accept: 'application/json' },
+  })
+  if (!response.ok) throw new Error(`probe ${String(response.status)}`)
+  return await response.json() as { kind: 'ok' | 'missing-cli' | 'signed-out' | 'timeout' | 'failed' }
+}
+
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-cursor-acp: dictionaries')
   const t = ctx.locale.bind(NS)
@@ -46,6 +56,7 @@ export function apply(ctx: ClientContext): void {
         t: (key: CursorAcpKey) => t(key),
         loadStatus,
         saveSettings,
+        runProbe,
       }),
     },
     CursorAcpSection,

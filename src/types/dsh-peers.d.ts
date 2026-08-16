@@ -8,6 +8,13 @@ declare module '@deepseek-ai/cordis' {
     inject: (deps: string[], callback: (ctx: Context) => void) => void
     effect: (fn: () => (() => void) | void, name?: string) => void
     plugin: (mod: unknown, config?: unknown) => { dispose: () => void }
+    systemPrompt: {
+      section: (spec: {
+        name: string
+        order: number
+        text: string | ((context: unknown) => string)
+      }) => () => void
+    }
     logger: {
       info: (message: string) => void
       warn: (message: string) => void

@@ -27,6 +27,8 @@ const hostFiles = [
   ['src/list-models.ts', 'lib/list-models.js'],
   ['src/settings-schema.ts', 'lib/settings-schema.js'],
   ['src/import-host.ts', 'lib/import-host.js'],
+  ['src/prompt.ts', 'lib/prompt.js'],
+  ['src/probe.ts', 'lib/probe.js'],
   ['src/acp-config.ts', 'lib/acp-config.js'],
   ['src/index.ts', 'lib/index.js'],
   ['src/bin.ts', 'lib/bin.js'],
