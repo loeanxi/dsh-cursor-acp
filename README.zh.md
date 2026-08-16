@@ -2,13 +2,15 @@
 
 [English](README.md) | 中文
 
-把本机**官方 Cursor CLI**（`agent acp`）挂成 DeepSeek Harness 子代理。父模型可以用工具 `cursor_agent` 派一个独立任务。这**不是**模型选择器里的「Cursor 模型」，也**不会**去打 Cursor 的私有 HTTP 接口。
+这是一个 DeepSeek Harness 插件。当前对话里的智能体可以把一件独立的活交给本机**已经登录的 Cursor CLI**，走工具 `cursor_agent`。
+
+这不是模型列表里的「Cursor 模型」，也不会去打 Cursor 的私有接口。社区插件，不是 Cursor 官方产品。
 
 ## 你需要
 
-1. 同一台机器上的 [Cursor CLI](https://cursor.com/docs/cli/installation)。
-2. 先执行 `agent login`（或设置 `CURSOR_API_KEY`）。
-3. 当前 dsh 已带 `@deepseek-ai/dsh-subagent-acp` 与 `@deepseek-ai/dsh-tool-subagent`。
+1. 同一台电脑上的 [Cursor CLI](https://cursor.com/docs/cli/installation)。
+2. 先登录一次：`agent login`（或设置 `CURSOR_API_KEY`）。
+3. 已安装可用的 DeepSeek Harness（桌面或 Web）。
 
 Windows（PowerShell）：
 
@@ -30,35 +32,23 @@ agent login
 dsh plugin --profile desktop add github:loeanxi/dsh-cursor-acp
 ```
 
-npm（发布到注册表之后）：
+Web 端把 `--profile desktop` 换成 `--profile web`。装完重启。
 
-```sh
-dsh plugin --profile desktop add dsh-cursor-acp
-```
-
-本地目录：
-
-```sh
-dsh plugin --profile desktop add link:/absolute/path/to/dsh-cursor-acp
-```
-
-重启 profile。打开 **设置 → Cursor 子代理** 查看是否找到命令行，并按 Cursor 的方式选子代理模型：思考程度、Fast、模型家族。这不会改父对话的模型。
+打开 **设置 → Cursor 子代理**。找到 CLI 之后，可以按 Cursor 的方式选子代理模型：思考程度、Fast、模型。这只影响 `cursor_agent`，不会改当前对话用的模型。
 
 ## 怎么用
 
-在 DeepSeek Harness 里让当前智能体把一件独立的活交给 Cursor。它应调用 `cursor_agent`，提示词要自成一体。子进程用当前工作区目录，额度走你的 Cursor 订阅。中间工具过程留在子进程，父对话只看到最终文本。
+和平时一样聊天，让智能体把一件能独立做完的活交给 Cursor，比如实现某个功能、看某个文件。它应调用 `cursor_agent`，提示词要写完整，不要依赖对话里没传过去的上下文。
 
-## 诊断
+子进程用当前工作区目录，额度走你的 Cursor 订阅。中间工具过程留在子进程，这边对话只看到最终结果。
+
+## 找不到命令行时
 
 ```sh
 dsh plugin --profile desktop exec dsh-cursor-acp doctor
 ```
 
-只打印路径元数据，不读 Cursor 凭据文件。
-
-## 开源
-
-MIT。GitHub 仓库请加 topic `dsh-plugin`，并给 [awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin) 提一行 PR。不要写成与 Cursor 官方合作。
+只打印它找到的路径，不读 Cursor 凭据。
 
 ## 许可证
 
