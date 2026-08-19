@@ -92,9 +92,9 @@ function previewComposed(
 
 const card: CSSProperties = {
   marginTop: 16,
-  border: '1px solid var(--dsw-alias-border, #333)',
+  border: '1px solid var(--dsw-alias-border-l2)',
   borderRadius: 10,
-  background: 'var(--dsw-alias-bg-elevated, #1e1e1e)',
+  background: 'var(--dsw-alias-bg-layer-1)',
   overflow: 'hidden',
 }
 
@@ -103,7 +103,7 @@ const heading: CSSProperties = {
   fontSize: 11,
   letterSpacing: 0.4,
   textTransform: 'uppercase',
-  color: 'var(--dsw-alias-text-secondary, #888)',
+  color: 'var(--dsw-alias-label-tertiary)',
 }
 
 const row: CSSProperties = {
@@ -112,11 +112,11 @@ const row: CSSProperties = {
 
 const divider: CSSProperties = {
   height: 1,
-  background: 'var(--dsw-alias-border, #333)',
+  background: 'var(--dsw-alias-border-l2)',
 }
 
 const warnText: CSSProperties = {
-  color: 'var(--dsw-alias-danger, #c00)',
+  color: 'var(--dsw-alias-state-error-primary)',
 }
 
 export function CursorAcpSection(props: CursorAcpSectionProps) {
@@ -170,7 +170,7 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
       <p style={{ margin: '0 0 12px', lineHeight: 1.5 }}>{t('intro')}</p>
       <p style={{ margin: '0 0 12px', lineHeight: 1.5 }}>{t('proxyHint')}</p>
       {status === 'loading' ? <p>{t('loading')}</p> : null}
-      {status === 'error' ? <p style={{ color: 'var(--dsw-alias-danger, #c00)' }}>{t('failed')}</p> : null}
+      {status === 'error' ? <p style={warnText}>{t('failed')}</p> : null}
       {status !== 'loading' && status !== 'error' ? (
         <>
           <p>{status.found ? t('found') : t('missing')}</p>
@@ -234,10 +234,10 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
                           padding: '6px 12px',
                           borderRadius: 8,
                           border: selected
-                            ? '1px solid var(--dsw-alias-accent, #5BB73B)'
-                            : '1px solid var(--dsw-alias-border, #444)',
-                          background: selected ? 'color-mix(in srgb, var(--dsw-alias-accent, #5BB73B) 18%, transparent)' : 'transparent',
-                          color: 'var(--dsw-alias-text, inherit)',
+                            ? '1px solid var(--dsw-alias-state-business-primary)'
+                            : '1px solid var(--dsw-alias-border-l2)',
+                          background: selected ? 'color-mix(in srgb, var(--dsw-alias-state-business-primary) 18%, transparent)' : 'transparent',
+                          color: 'var(--dsw-alias-label-primary)',
                           cursor: writable ? 'pointer' : 'default',
                         }}
                       >
@@ -272,17 +272,24 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
                 value={choice.model}
                 disabled={!writable}
                 onChange={event => setField('model', event.target.value)}
-                style={{ width: '100%', padding: '6px 8px' }}
+                style={{
+                  width: '100%',
+                  padding: '6px 8px',
+                  border: '1px solid var(--dsw-alias-border-l2)',
+                  borderRadius: 6,
+                  background: 'var(--dsw-alias-bg-layer-1)',
+                  color: 'var(--dsw-alias-label-primary)',
+                }}
               >
                 {families.map(item => (
                   <option key={item.id} value={item.id}>{item.label}</option>
                 ))}
               </select>
               <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-                <p style={{ margin: 0, flex: 1, fontSize: 12, color: 'var(--dsw-alias-text-secondary, #888)' }}>
+                <p style={{ margin: 0, flex: 1, fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
                   {t('using')}
                   {': '}
-                  <code>{composed}</code>
+                  <code style={{ color: 'var(--dsw-alias-label-primary)' }}>{composed}</code>
                 </p>
                 <button
                   type="button"
@@ -293,7 +300,7 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
                 </button>
               </div>
               {dirty ? (
-                <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--dsw-alias-text-secondary, #888)' }}>
+                <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
                   {t('pickerPending')}
                 </p>
               ) : null}
@@ -306,7 +313,15 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
               value={custom}
               disabled={!writable}
               onChange={event => setCustom(event.target.value)}
-              style={{ flex: 1, minWidth: 180, padding: '4px 8px' }}
+              style={{
+                flex: 1,
+                minWidth: 180,
+                padding: '4px 8px',
+                border: '1px solid var(--dsw-alias-border-l2)',
+                borderRadius: 6,
+                background: 'var(--dsw-alias-bg-layer-1)',
+                color: 'var(--dsw-alias-label-primary)',
+              }}
             />
             <button
               type="button"
@@ -320,7 +335,7 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
               {t('modelApply')}
             </button>
           </div>
-          {saveError ? <p style={{ marginTop: 8, color: 'var(--dsw-alias-danger, #c00)' }}>{t('saveFailed')}</p> : null}
+          {saveError ? <p style={{ marginTop: 8, color: 'var(--dsw-alias-state-error-primary)' }}>{t('saveFailed')}</p> : null}
           {status.found ? null : (
             <p>{t(typeof navigator !== 'undefined' && /Win/i.test(navigator.platform) ? 'installWin' : 'installUnix')}</p>
           )}
