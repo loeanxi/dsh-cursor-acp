@@ -71,7 +71,11 @@ Open **Settings → Cursor subagent**.
 - You can pick the child model (effort, Fast, model), then click **Apply**. That only affects `cursor_agent`, not the model of the current chat. The choice is stored by this plugin, so it works on stock DeepSeek Harness too — it does not need the Host settings allowlist. If an official settings row for this plugin is grey, ignore it and use **Settings → Cursor subagent**.
 - **Test** sends one official read-only `agent --print --mode ask` job (reply `pong`). It uses a little Cursor quota. It does not start a full ACP session.
 
-![Settings → Cursor subagent](assets/settings.png)
+![Settings → Plugins](assets/cursor-settings-overview.png)
+
+![Cursor subagent status](assets/cursor-settings-status.png)
+
+![Cursor subagent model settings](assets/cursor-settings-model.png)
 
 ## How to use it
 
