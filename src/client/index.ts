@@ -45,12 +45,13 @@ async function runProbe(): Promise<{ kind: 'ok' | 'missing-cli' | 'signed-out' |
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-cursor-acp: dictionaries')
   const t = ctx.locale.bind(NS)
-  ctx.slots.inject('settings.section', () => ctx.slots.register(
+  // One card inside the Plugins → configurable settings tab ("插件配置").
+  // The tab dispatches cards by settings namespace; `cursor-acp` is registered
+  // host-side, so the Host's describe mirror serves it and this card appears.
+  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register(
     {
-      name: 'settings.section',
-      id: 'cursor-acp',
-      order: 26,
-      label: () => t('nav'),
+      name: 'settings.plugin.item',
+      key: 'cursor-acp',
       locale: NS,
       inject: () => ({
         t: (key: CursorAcpKey) => t(key),

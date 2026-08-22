@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import type { CursorAcpKey } from './locales.ts'
 
 export interface CursorModelOption {
@@ -52,6 +52,22 @@ const EFFORT_KEYS = {
   max: 'effortMax',
 } as const
 
+type Tone = 'ok' | 'warn' | 'error' | 'neutral'
+type Overall = 'ok' | 'warn' | 'error'
+
+const toneColor: Record<Tone, string> = {
+  ok: 'var(--dsw-alias-state-success-primary)',
+  warn: 'var(--dsw-alias-state-warn-primary)',
+  error: 'var(--dsw-alias-state-error-primary)',
+  neutral: 'var(--dsw-alias-border-l2)',
+}
+
+const toneText: Record<'ok' | 'warn' | 'error', string> = {
+  ok: 'var(--dsw-alias-state-success-primary)',
+  warn: 'var(--dsw-alias-state-warn-label)',
+  error: 'var(--dsw-alias-state-error-primary)',
+}
+
 function choiceFrom(status: CursorAcpStatusView | 'loading' | 'error'): Required<CursorAcpSettingsValue> {
   if (status !== 'loading' && status !== 'error') {
     return {
@@ -90,6 +106,12 @@ function previewComposed(
   return listed
 }
 
+function overallOf(status: CursorAcpStatusView): Overall {
+  if (!status.found || status.hostPluginError !== undefined) return 'error'
+  if (status.login === 'signed-in' && status.proxy === 'set' && status.clashDirectNode !== true) return 'ok'
+  return 'warn'
+}
+
 const card: CSSProperties = {
   marginTop: 16,
   border: '1px solid var(--dsw-alias-border-l2)',
@@ -115,8 +137,91 @@ const divider: CSSProperties = {
   background: 'var(--dsw-alias-border-l2)',
 }
 
-const warnText: CSSProperties = {
-  color: 'var(--dsw-alias-state-error-primary)',
+const helpText: CSSProperties = {
+  margin: '0 0 8px',
+  fontSize: 13,
+  lineHeight: 1.6,
+  color: 'var(--dsw-alias-label-secondary)',
+}
+
+const codeStyle: CSSProperties = {
+  fontSize: 12,
+  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+  background: 'color-mix(in srgb, var(--dsw-alias-label-secondary) 10%, transparent)',
+  padding: '1px 5px',
+  borderRadius: 5,
+  wordBreak: 'break-all',
+}
+
+const buttonBase: CSSProperties = {
+  padding: '6px 14px',
+  borderRadius: 8,
+  fontSize: 13,
+  border: '1px solid transparent',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+}
+
+const pendingBadge: CSSProperties = {
+  fontSize: 11,
+  padding: '2px 8px',
+  borderRadius: 999,
+  color: 'var(--dsw-alias-state-warn-label)',
+  background: 'color-mix(in srgb, var(--dsw-alias-state-warn-primary) 14%, transparent)',
+  whiteSpace: 'nowrap',
+}
+
+const liveBadge: CSSProperties = {
+  fontSize: 11,
+  padding: '2px 8px',
+  borderRadius: 999,
+  color: 'var(--dsw-alias-state-success-primary)',
+  background: 'color-mix(in srgb, var(--dsw-alias-state-success-primary) 12%, transparent)',
+  whiteSpace: 'nowrap',
+}
+
+function StatusDot({ tone }: { tone: Tone }) {
+  return (
+    <span
+      aria-hidden
+      style={{
+        width: 8,
+        height: 8,
+        borderRadius: '50%',
+        background: toneColor[tone],
+        flexShrink: 0,
+        marginTop: 6,
+      }}
+    />
+  )
+}
+
+function DetailRow({ label, tone, children }: { label: string; tone: Tone; children: ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '5px 0' }}>
+      <StatusDot tone={tone} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, color: 'var(--dsw-alias-label-tertiary)' }}>{label}</div>
+        <div style={{ fontSize: 13, color: 'var(--dsw-alias-label-primary)', marginTop: 1, wordBreak: 'break-word' }}>{children}</div>
+      </div>
+    </div>
+  )
+}
+
+const probeTone: Record<CursorAcpProbeKind, 'ok' | 'warn' | 'error'> = {
+  ok: 'ok',
+  failed: 'error',
+  'missing-cli': 'error',
+  'signed-out': 'error',
+  timeout: 'warn',
+}
+
+const probeResultKey: Record<CursorAcpProbeKind, CursorAcpKey> = {
+  ok: 'probeOk',
+  failed: 'probeFail',
+  'missing-cli': 'probeMissing',
+  'signed-out': 'probeSignedOut',
+  timeout: 'probeTimeout',
 }
 
 export function CursorAcpSection(props: CursorAcpSectionProps) {
@@ -125,7 +230,10 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
   const [custom, setCustom] = useState('')
   const [draft, setDraft] = useState<Required<CursorAcpSettingsValue> | null>(null)
   const [saveError, setSaveError] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [appliedFlash, setAppliedFlash] = useState(false)
   const [probe, setProbe] = useState<CursorAcpProbeKind | 'idle' | 'running'>('idle')
+  const [open, setOpen] = useState(false)
   useEffect(() => {
     let cancelled = false
     void loadStatus().then(
@@ -134,18 +242,19 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
     )
     return () => { cancelled = true }
   }, [loadStatus])
-  const writable = status !== 'loading' && status !== 'error'
+
+  const statusView = status !== 'loading' && status !== 'error' ? status : null
+  const writable = statusView !== null && !saving
   const saved = choiceFrom(status)
   const choice = draft ?? saved
   const dirty = draft !== null && !sameChoice(draft, saved)
-  const families = status !== 'loading' && status !== 'error' ? status.families : [{ id: 'auto', label: 'Auto', efforts: [], hasFast: false }]
+  const families = statusView !== null ? statusView.families : [{ id: 'auto', label: 'Auto', efforts: [], hasFast: false }]
   const family = families.find(item => item.id === choice.model) ?? families[0]
   const efforts = family?.efforts ?? []
   const showEffort = choice.model !== 'auto' && efforts.length > 0
   const showFast = choice.model !== 'auto' && family?.hasFast === true
-  const composed = status !== 'loading' && status !== 'error'
-    ? previewComposed(choice, status)
-    : choice.model
+  const composed = statusView !== null ? previewComposed(choice, statusView) : choice.model
+  const isWindows = typeof navigator !== 'undefined' && /Win/i.test(navigator.platform)
 
   const setField = (field: keyof Required<CursorAcpSettingsValue>, value: string | boolean): void => {
     setDraft({ ...choice, [field]: value })
@@ -153,70 +262,209 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
 
   const applyChoice = (next: Required<CursorAcpSettingsValue>): void => {
     void (async () => {
+      setSaving(true)
+      setSaveError(false)
       try {
         const savedNext = await saveSettings(next)
         setStatus(savedNext)
         setDraft(null)
-        setSaveError(false)
+        setAppliedFlash(true)
+        window.setTimeout(() => setAppliedFlash(false), 3000)
       } catch {
         setSaveError(true)
+      } finally {
+        setSaving(false)
       }
     })()
   }
 
+  const over = statusView !== null ? overallOf(statusView) : ('warn' as Overall)
+  const conclusion = statusView !== null
+    ? !statusView.found
+      ? t('stateMissingCli')
+      : statusView.hostPluginError !== undefined
+        ? t('stateBrokenHost')
+        : over === 'ok'
+          ? t('stateReady')
+          : t('stateWarn')
+    : ''
+  const loginTone: Tone = statusView?.login === 'signed-in' ? 'ok' : statusView?.login === 'signed-out' ? 'error' : 'warn'
+  const loginText = statusView?.login === 'signed-in' ? t('logOk') : statusView?.login === 'signed-out' ? t('logOut') : t('logUnknown')
+  const proxyTone: Tone = statusView?.proxy === 'set' ? 'ok' : statusView?.proxy === 'partial' ? 'warn' : 'error'
+  const proxyText = statusView?.proxy === 'set' ? t('proxySet') : statusView?.proxy === 'partial' ? t('proxyPartial') : t('proxyMissing')
+
+  // One card inside the Plugins → configurable settings tab, collapsible like
+  // the other plugin cards around it. Staged edits outlive collapsing.
   return (
-    <section style={{ maxWidth: 640, padding: '8px 0' }}>
-      <h2 style={{ fontSize: 18, margin: '0 0 8px' }}>{t('title')}</h2>
-      <p style={{ margin: '0 0 12px', lineHeight: 1.5 }}>{t('intro')}</p>
-      <p style={{ margin: '0 0 12px', lineHeight: 1.5 }}>{t('proxyHint')}</p>
-      {status === 'loading' ? <p>{t('loading')}</p> : null}
-      {status === 'error' ? <p style={warnText}>{t('failed')}</p> : null}
-      {status !== 'loading' && status !== 'error' ? (
+    <li style={{
+      listStyle: 'none',
+      border: '1px solid var(--dsw-alias-border-l2)',
+      borderRadius: 12,
+      background: open ? 'var(--dsw-alias-bg-layer-2)' : 'var(--dsw-alias-bg-layer-3)',
+      transition: 'border-color .16s, background .16s',
+    }}>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => { setOpen(!open) }}
+        style={{
+          width: '100%',
+          appearance: 'none',
+          border: 0,
+          background: 'none',
+          font: 'inherit',
+          color: 'inherit',
+          textAlign: 'left',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '14px 16px',
+          borderRadius: 12,
+        }}
+      >
+        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.4, color: 'var(--dsw-alias-label-primary)' }}>{t('nav')}</span>
+          <span style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--dsw-alias-label-tertiary)' }}>{t('intro')}</span>
+        </span>
+        {dirty ? (
+          <span style={{
+            flex: 'none',
+            borderRadius: 999,
+            padding: '1px 8px',
+            fontSize: 11,
+            lineHeight: '17px',
+            fontWeight: 500,
+            whiteSpace: 'nowrap',
+            background: 'var(--dsw-alias-bg-module-platform)',
+            color: 'var(--dsw-alias-label-secondary)',
+          }}>
+            {t('pendingBadge')}
+          </span>
+        ) : null}
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          aria-hidden
+          style={{
+            flex: 'none',
+            color: 'var(--dsw-alias-label-tertiary)',
+            transition: 'transform .16s',
+            transform: open ? 'rotate(180deg)' : undefined,
+          }}
+        >
+          <path d="M3.5 5.5 7 9l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open ? (
+        <div style={{ borderTop: '1px solid var(--dsw-alias-border-l2)', margin: '0 16px', paddingBottom: 8 }}>
+      {statusView === null ? (
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--dsw-alias-label-secondary)' }}>
+          {status === 'error' ? <span style={{ color: 'var(--dsw-alias-state-error-primary)' }}>{t('failed')}</span> : t('loading')}
+        </p>
+      ) : (
         <>
-          <p>{status.found ? t('found') : t('missing')}</p>
-          {status.command !== undefined ? (
-            <p>
-              {t('command')}
-              {': '}
-              <code>{status.command}</code>
-            </p>
-          ) : null}
-          {status.found ? (
-            <>
-              <p style={status.login === 'signed-in' ? undefined : warnText}>
-                {status.login === 'signed-in' ? t('signedIn') : status.login === 'signed-out' ? t('signedOut') : t('loginUnknown')}
-              </p>
-              {status.proxy === 'set' || status.login === 'signed-in' ? null : (
-                <p style={warnText}>{status.proxy === 'partial' ? t('proxyPartial') : t('proxyMissing')}</p>
+          {/* 1 — 状态横幅 */}
+          <div
+            style={{
+              marginTop: 0,
+              border: '1px solid var(--dsw-alias-border-l2)',
+              borderLeft: `3px solid ${toneColor[over]}`,
+              borderRadius: 10,
+              background: `color-mix(in srgb, ${toneColor[over]} 7%, transparent)`,
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px' }}>
+              <StatusDot tone={over} />
+              <strong style={{ fontSize: 14, lineHeight: 1.55 }}>{conclusion}</strong>
+            </div>
+            <div style={{ padding: '0 14px 10px', borderTop: '1px solid var(--dsw-alias-border-l2)' }}>
+              {statusView.found ? (
+                <>
+                  <DetailRow label={t('detailExec')} tone="neutral">
+                    {statusView.command !== undefined ? <code style={codeStyle}>{statusView.command}</code> : '—'}
+                  </DetailRow>
+                  <DetailRow label={t('detailLogin')} tone={loginTone}>{loginText}</DetailRow>
+                  <DetailRow label={t('detailProxy')} tone={proxyTone}>{proxyText}</DetailRow>
+                  {statusView.clashDirectNode === true ? (
+                    <DetailRow label={t('detailClash')} tone="warn">{t('clashOn')}</DetailRow>
+                  ) : null}
+                  {statusView.hostPluginError !== undefined ? (
+                    <DetailRow label={t('detailHostPlugin')} tone="error">
+                      <code style={codeStyle}>{statusView.hostPluginError}</code>
+                    </DetailRow>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <DetailRow label={t('detailExec')} tone="error">{t('missingCliRow')}</DetailRow>
+                  <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.6 }}>
+                    <code style={codeStyle}>{isWindows ? t('installWin') : t('installUnix')}</code>
+                  </p>
+                  <p style={{ margin: '6px 0 0', fontSize: 13, lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)' }}>
+                    {t('loginCmdHint')}
+                  </p>
+                </>
               )}
-              {status.clashDirectNode === true ? <p style={warnText}>{t('proxyClashDirect')}</p> : null}
-              {status.hostPluginError !== undefined ? <p style={warnText}>{t('hostPluginMissing')}</p> : null}
-              <p style={{ margin: '12px 0 6px', lineHeight: 1.5 }}>{t('probeHelp')}</p>
-              <button
-                type="button"
-                disabled={!writable || probe === 'running'}
-                onClick={() => {
-                  setProbe('running')
-                  void runProbe().then(
-                    (next) => setProbe(next.kind),
-                    () => setProbe('failed'),
-                  )
-                }}
-              >
-                {probe === 'running' ? t('probeRunning') : t('probe')}
-              </button>
-              {probe === 'ok' ? <p>{t('probeOk')}</p> : null}
-              {probe === 'failed' ? <p style={warnText}>{t('probeFail')}</p> : null}
-              {probe === 'missing-cli' ? <p style={warnText}>{t('probeMissing')}</p> : null}
-              {probe === 'signed-out' ? <p style={warnText}>{t('probeSignedOut')}</p> : null}
-              {probe === 'timeout' ? <p style={warnText}>{t('probeTimeout')}</p> : null}
+            </div>
+            <details style={{ borderTop: '1px solid var(--dsw-alias-border-l2)' }}>
+              <summary style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
+                {t('netDetails')}
+              </summary>
+              <p style={{ margin: 0, padding: '0 14px 12px', fontSize: 12.5, lineHeight: 1.65, color: 'var(--dsw-alias-label-secondary)' }}>
+                {t('proxyHint')}
+              </p>
+            </details>
+          </div>
+
+          {/* 2 — 连通性测试 */}
+          {statusView.found ? (
+            <>
+              <h3 style={{ fontSize: 15, margin: '16px 0 6px' }}>{t('probeSection')}</h3>
+              <p style={helpText}>{t('probeHelp')}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  disabled={probe === 'running'}
+                  onClick={() => {
+                    setProbe('running')
+                    void runProbe().then(
+                      (next) => setProbe(next.kind),
+                      () => setProbe('failed'),
+                    )
+                  }}
+                  style={{
+                    ...buttonBase,
+                    borderColor: 'var(--dsw-alias-border-l2)',
+                    background: 'transparent',
+                    color: 'var(--dsw-alias-label-primary)',
+                    opacity: probe === 'running' ? 0.6 : 1,
+                    cursor: probe === 'running' ? 'default' : 'pointer',
+                  }}
+                >
+                  {probe === 'running' ? t('probeRunning') : t('probe')}
+                </button>
+                {probe !== 'idle' && probe !== 'running' ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: toneText[probeTone[probe]] }}>
+                    <StatusDot tone={probeTone[probe]} />
+                    {t(probeResultKey[probe])}
+                  </span>
+                ) : null}
+              </div>
             </>
-          ) : (
-            <p>{t('login')}</p>
-          )}
-          <h3 style={{ fontSize: 15, margin: '20px 0 6px' }}>{t('picker')}</h3>
-          <p style={{ margin: '0 0 8px', lineHeight: 1.5 }}>{t('pickerHelp')}</p>
+          ) : null}
+
+          {/* 3 — 子代理模型 */}
+          <h3 style={{ fontSize: 15, margin: '16px 0 6px' }}>{t('picker')}</h3>
+          <p style={helpText}>{t('pickerHelp')}</p>
           <div style={card}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderBottom: '1px solid var(--dsw-alias-border-l2)', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>{t('using')}</span>
+              <code style={{ fontSize: 13, color: 'var(--dsw-alias-label-primary)' }}>{composed}</code>
+              {dirty ? <span style={pendingBadge}>{t('pendingBadge')}</span> : <span style={liveBadge}>{t('live')}</span>}
+            </div>
             {showEffort ? (
               <>
                 <div style={heading}>{t('effort')}</div>
@@ -228,17 +476,18 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
                       <button
                         key={effort}
                         type="button"
-                        disabled={!writable}
+                         disabled={!writable}
                         onClick={() => setField('effort', effort)}
                         style={{
+                          ...buttonBase,
                           padding: '6px 12px',
-                          borderRadius: 8,
-                          border: selected
-                            ? '1px solid var(--dsw-alias-state-business-primary)'
-                            : '1px solid var(--dsw-alias-border-l2)',
+                          borderColor: selected
+                            ? 'var(--dsw-alias-state-business-primary)'
+                            : 'var(--dsw-alias-border-l2)',
                           background: selected ? 'color-mix(in srgb, var(--dsw-alias-state-business-primary) 18%, transparent)' : 'transparent',
                           color: 'var(--dsw-alias-label-primary)',
-                          cursor: writable ? 'pointer' : 'default',
+                           opacity: writable ? 1 : 0.6,
+                           cursor: writable ? 'pointer' : 'default',
                         }}
                       >
                         {t(key)}
@@ -259,7 +508,7 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
                     type="checkbox"
                     role="switch"
                     checked={choice.fast}
-                    disabled={!writable}
+                     disabled={!writable}
                     onChange={event => setField('fast', event.target.checked)}
                   />
                 </label>
@@ -270,7 +519,7 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
             <div style={row}>
               <select
                 value={choice.model}
-                disabled={!writable}
+                 disabled={!writable}
                 onChange={event => setField('model', event.target.value)}
                 style={{
                   width: '100%',
@@ -285,62 +534,97 @@ export function CursorAcpSection(props: CursorAcpSectionProps) {
                   <option key={item.id} value={item.id}>{item.label}</option>
                 ))}
               </select>
-              <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-                <p style={{ margin: 0, flex: 1, fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
-                  {t('using')}
-                  {': '}
-                  <code style={{ color: 'var(--dsw-alias-label-primary)' }}>{composed}</code>
-                </p>
-                <button
-                  type="button"
-                  disabled={!writable || !dirty}
-                  onClick={() => applyChoice(choice)}
-                >
-                  {t('modelApply')}
-                </button>
-              </div>
-              {dirty ? (
-                <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }}>
-                  {t('pickerPending')}
-                </p>
-              ) : null}
+            </div>
+            <div style={divider} />
+            <div style={heading}>{t('customHeading')}</div>
+            <div style={{ ...row, display: 'flex', gap: 8, alignItems: 'stretch' }}>
+              <input
+                aria-label={t('modelCustom')}
+                placeholder={t('modelCustom')}
+                value={custom}
+                 disabled={!writable}
+                onChange={event => setCustom(event.target.value)}
+                style={{
+                  flex: 1,
+                  minWidth: 180,
+                  padding: '4px 8px',
+                  border: '1px solid var(--dsw-alias-border-l2)',
+                  borderRadius: 6,
+                  background: 'var(--dsw-alias-bg-layer-1)',
+                  color: 'var(--dsw-alias-label-primary)',
+                }}
+              />
+              <button
+                type="button"
+                 disabled={!writable || custom.trim() === ''}
+                onClick={() => {
+                  const next = custom.trim()
+                  setCustom('')
+                  applyChoice({ model: next, effort: choice.effort, fast: choice.fast })
+                }}
+                style={{
+                  ...buttonBase,
+                  borderColor: 'var(--dsw-alias-border-l2)',
+                  background: 'transparent',
+                  color: 'var(--dsw-alias-label-primary)',
+                   opacity: !writable || custom.trim() === '' ? 0.5 : 1,
+                   cursor: !writable || custom.trim() === '' ? 'default' : 'pointer',
+                }}
+              >
+                {t('modelApply')}
+              </button>
             </div>
           </div>
-          <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              aria-label={t('modelCustom')}
-              placeholder={t('modelCustom')}
-              value={custom}
-              disabled={!writable}
-              onChange={event => setCustom(event.target.value)}
-              style={{
-                flex: 1,
-                minWidth: 180,
-                padding: '4px 8px',
-                border: '1px solid var(--dsw-alias-border-l2)',
-                borderRadius: 6,
-                background: 'var(--dsw-alias-bg-layer-1)',
-                color: 'var(--dsw-alias-label-primary)',
-              }}
-            />
-            <button
-              type="button"
-              disabled={!writable || custom.trim() === ''}
-              onClick={() => {
-                const next = custom.trim()
-                setCustom('')
-                applyChoice({ model: next, effort: choice.effort, fast: choice.fast })
-              }}
-            >
-              {t('modelApply')}
-            </button>
-          </div>
-          {saveError ? <p style={{ marginTop: 8, color: 'var(--dsw-alias-state-error-primary)' }}>{t('saveFailed')}</p> : null}
-          {status.found ? null : (
-            <p>{t(typeof navigator !== 'undefined' && /Win/i.test(navigator.platform) ? 'installWin' : 'installUnix')}</p>
-          )}
         </>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, padding: '12px 0 4px', borderTop: '1px solid var(--dsw-alias-border-l2)' }}>
+        {appliedFlash ? <span style={{ flex: 1, fontSize: 12, color: toneText.ok }}>{t('applied')}</span> : null}
+        {saveError ? <span style={{ flex: 1, fontSize: 12, color: toneText.error }}>{t('saveFailed')}</span> : null}
+        {dirty ? (
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => { setDraft(null); setSaveError(false) }}
+            style={{
+              appearance: 'none',
+              border: '1px solid var(--dsw-alias-border-l2)',
+              borderRadius: 8,
+              padding: '5px 14px',
+              font: 'inherit',
+              fontSize: 13,
+              lineHeight: 1.5,
+              background: 'none',
+              color: 'var(--dsw-alias-label-secondary)',
+              cursor: saving ? 'default' : 'pointer',
+              opacity: saving ? 0.4 : 1,
+            }}
+          >
+            {t('undo')}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          disabled={!writable || !dirty}
+          onClick={() => applyChoice(choice)}
+          style={{
+            appearance: 'none',
+            border: '1px solid transparent',
+            borderRadius: 8,
+            padding: '5px 14px',
+            font: 'inherit',
+            fontSize: 13,
+            lineHeight: 1.5,
+            background: 'var(--dsw-alias-label-primary)',
+            color: 'var(--dsw-alias-bg-layer-3)',
+            cursor: !writable || !dirty ? 'default' : 'pointer',
+            opacity: !writable || !dirty ? 0.4 : 1,
+          }}
+        >
+          {saving ? t('saving') : t('modelApply')}
+        </button>
+      </div>
+      </div>
       ) : null}
-    </section>
+    </li>
   )
 }
